@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Xochi — Gestión de Documentos ISO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+<style>
+:root{
+  --bg:#F4F1EC; --surface:#FDFCFA; --surface2:#EFEDE8;
+  --border:rgba(60,50,30,.12); --border-strong:rgba(60,50,30,.22);
+  --text:#1C1914; --text-2:#6B6355; --text-3:#A09585;
+  --accent:#C4520A; --accent-light:#FBE9DB; --accent-text:#7D310A;
+  --green:#2D6A3F; --green-light:#D6EDDC; --green-text:#1A4228;
+  --amber:#8A5A00; --amber-light:#FFF0CC; --amber-text:#5C3A00;
+  --blue:#1A4A8A; --blue-light:#DCE9F8; --blue-text:#0D2E5C;
+  --red:#A32D2D; --red-light:#FCEBEB; --red-text:#501313;
+  --radius:10px; --radius-lg:16px; --radius-xl:22px;
+  --shadow:0 1px 3px rgba(60,50,30,.08),0 4px 16px rgba(60,50,30,.04);
+  --shadow-sm:0 1px 2px rgba(60,50,30,.06);
+  --shadow-lg:0 8px 40px rgba(28,25,20,.22);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.logo-sub{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;letter-spacing:.04em}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* PAGE */
+.page{max-width:1240px;margin:0 auto;padding:1.75rem 1.5rem}
+@media(max-width:900px){header{padding:0 1rem}.page{padding:1rem}}
+
+/* NOTIF BAR */
+.notif-bar{background:var(--blue-light);border:1px solid rgba(26,74,138,.2);border-radius:var(--radius-lg);padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;font-size:12px;color:var(--blue-text)}
+.notif-bar.hidden{display:none}
+
+/* ALERT BANNERS */
+.alert-banner{margin-bottom:1.5rem}
+.alert-card{border-radius:var(--radius-lg);padding:.85rem 1.1rem;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;border:1px solid transparent;animation:fadeIn .25s ease}
+.alert-card:last-child{margin-bottom:0}
+.alert-card.expired{background:var(--red-light);border-color:rgba(163,45,45,.2)}
+.alert-card.week{background:var(--accent-light);border-color:rgba(196,82,10,.2)}
+.alert-card.biweek{background:var(--amber-light);border-color:rgba(138,90,0,.18)}
+.alert-card.month{background:var(--blue-light);border-color:rgba(26,74,138,.18)}
+.alert-icon{font-size:16px;margin-top:1px;flex-shrink:0}
+.alert-card.expired .alert-icon{color:var(--red)}.alert-card.week .alert-icon{color:var(--accent)}
+.alert-card.biweek .alert-icon{color:var(--amber)}.alert-card.month .alert-icon{color:var(--blue)}
+.alert-body{flex:1;min-width:0}
+.alert-title{font-size:13px;font-weight:600}
+.alert-card.expired .alert-title{color:var(--red-text)}.alert-card.week .alert-title{color:var(--accent-text)}
+.alert-card.biweek .alert-title{color:var(--amber-text)}.alert-card.month .alert-title{color:var(--blue-text)}
+.alert-items{margin-top:5px;display:flex;flex-direction:column;gap:4px}
+.alert-item{font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.alert-item-code{font-family:'DM Mono',monospace;font-weight:500;color:var(--text)}
+.alert-dismiss{background:none;border:none;cursor:pointer;color:var(--text-3);padding:2px;border-radius:5px;flex-shrink:0;transition:color .1s}
+.alert-dismiss:hover{color:var(--text)}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:1.5rem}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:.9rem 1.1rem;box-shadow:var(--shadow-sm);transition:box-shadow .15s;cursor:default}
+.metric:hover{box-shadow:var(--shadow)}.metric.clickable{cursor:pointer}
+.metric-label{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.metric-value{font-size:26px;font-weight:300;letter-spacing:-.02em;line-height:1}
+.metric-sub{font-size:11px;color:var(--text-3);margin-top:3px;font-family:'DM Mono',monospace}
+.mv-green{color:var(--green)}.mv-amber{color:var(--amber)}.mv-red{color:var(--red)}.mv-blue{color:var(--blue)}
+
+/* MAIN GRID: sidebar right */
+.main-grid{display:grid;grid-template-columns:1fr 290px;gap:14px;align-items:start}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr}}
+
+/* PANELS */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:1.25rem 1.5rem;box-shadow:var(--shadow-sm)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:8px;flex-wrap:wrap}
+.panel-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);display:flex;align-items:center;gap:6px}
+
+/* LEFT COL stacked panels */
+.left-col{display:flex;flex-direction:column;gap:14px}
+
+/* SECTION DIVIDER between the two tables */
+.section-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.section-label .pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;font-family:'DM Mono',monospace}
+
+/* TABLE TOOLBAR */
+.docs-toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.search-input{flex:1;min-width:140px;height:34px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 10px 0 32px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23A09585' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--accent)}
+.filter-select{height:34px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 8px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text);background:var(--surface);outline:none;cursor:pointer}
+.filter-select:focus{border-color:var(--accent)}
+
+/* TABLES */
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:8px}
+.doc-table{width:100%;border-collapse:collapse}
+.doc-table thead tr{background:var(--surface2)}
+.doc-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .1s}
+.doc-table th:hover{color:var(--text)}
+.sort-icon{font-size:10px;margin-left:2px;opacity:.6}
+.doc-table td{font-size:12px;color:var(--text);padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.doc-table tr:last-child td{border-bottom:none}
+.doc-table tbody tr{transition:background .1s}
+.doc-table tbody tr:hover{background:var(--surface2)}
+.td-code{font-family:'DM Mono',monospace;font-weight:500;font-size:12px}
+.td-mono{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);white-space:nowrap}
+.td-actions{display:flex;gap:4px;align-items:center}
+.table-footer{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;flex-wrap:wrap;gap:6px;padding-top:2px}
+.table-empty{text-align:center;padding:2.5rem;color:var(--text-3);font-size:13px}
+
+/* PILLS / BADGES */
+.area-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:500;white-space:nowrap}
+.area-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500;white-space:nowrap}
+.sb-ok{background:var(--green-light);color:var(--green-text)}
+.sb-month{background:var(--blue-light);color:var(--blue-text)}
+.sb-biweek{background:var(--amber-light);color:var(--amber-text)}
+.sb-week{background:var(--accent-light);color:var(--accent-text)}
+.sb-expired{background:var(--red-light);color:var(--red-text)}
+.sb-none{background:var(--surface2);color:var(--text-3)}
+
+/* BUTTONS */
+.btn-primary{height:36px;padding:0 16px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary:hover{opacity:.88}.btn-primary:active{transform:scale(.97)}
+.btn-ghost{height:30px;padding:0 10px;background:transparent;color:var(--text-2);border:1px solid var(--border-strong);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:background .1s;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-cancel{height:36px;padding:0 16px;background:transparent;color:var(--text-2);border:1px solid var(--border-strong);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:background .1s}
+.btn-cancel:hover{background:var(--surface2)}
+.btn-green{height:36px;padding:0 16px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-green:hover{opacity:.88}
+
+/* ── REGISTER UPDATE BUTTON (big, in table row) ── */
+.btn-register-update{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 12px;height:auto;
+  background:var(--green-light);color:var(--green-text);
+  border:1.5px solid rgba(45,106,63,.28);
+  border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;
+  cursor:pointer;white-space:nowrap;
+  transition:background .12s,border-color .12s,transform .1s;
+}
+.btn-register-update:hover{background:#BBDFCA;border-color:rgba(45,106,63,.45)}
+.btn-register-update:active{transform:scale(.97)}
+.btn-register-update.urgent{background:var(--accent-light);color:var(--accent-text);border-color:rgba(196,82,10,.28)}
+.btn-register-update.urgent:hover{background:#F5D5BE;border-color:rgba(196,82,10,.45)}
+.btn-register-update.overdue{background:var(--red-light);color:var(--red-text);border-color:rgba(163,45,45,.28)}
+.btn-register-update.overdue:hover{background:#F5C5C5;border-color:rgba(163,45,45,.45)}
+
+.icon-btn{width:26px;height:26px;border:none;background:none;cursor:pointer;color:var(--text-3);padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;transition:background .1s,color .1s;flex-shrink:0}
+.icon-btn.edit:hover{background:var(--blue-light);color:var(--blue)}
+.icon-btn.del:hover{background:var(--red-light);color:var(--red)}
+
+/* RIGHT COL */
+.right-col{display:flex;flex-direction:column;gap:14px}
+.area-stats-list{display:flex;flex-direction:column;gap:2px}
+.astat-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:7px;transition:background .1s;cursor:pointer}
+.astat-row:hover{background:var(--surface2)}
+.astat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.astat-name{font-size:12px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.astat-track{width:54px;height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;flex-shrink:0}
+.astat-fill{height:100%;border-radius:99px}
+.astat-count{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;min-width:28px;text-align:right}
+.astat-alert{font-size:10px;color:var(--red);flex-shrink:0}
+
+.expiry-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.expiry-list::-webkit-scrollbar{width:3px}.expiry-list::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px}
+.expiry-item{padding:8px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:2px;cursor:pointer;transition:box-shadow .1s}
+.expiry-item:hover{box-shadow:var(--shadow-sm)}
+.expiry-code{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--text)}
+.expiry-name{font-size:11px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.expiry-meta{display:flex;align-items:center;justify-content:space-between;margin-top:3px}
+.expiry-days{font-size:11px;font-family:'DM Mono',monospace;font-weight:500}
+
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(28,25,20,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius-xl);padding:1.75rem;width:100%;box-shadow:var(--shadow-lg);transform:translateY(12px);transition:transform .2s;max-height:90vh;overflow-y:auto}
+.modal-backdrop.open .modal{transform:translateY(0)}
+.modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.modal-sub{font-size:12px;color:var(--text-3);margin-bottom:1.25rem}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:5px}
+.req{color:var(--accent)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:480px){.field-row{grid-template-columns:1fr}}
+.finput{width:100%;height:40px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s}
+.finput:focus{border-color:var(--accent)}
+.finput.mono{font-family:'DM Mono',monospace;letter-spacing:.04em;text-transform:uppercase}
+.finput.mono::placeholder{text-transform:none;letter-spacing:0}
+.fhint{font-size:11px;color:var(--text-3);margin-top:4px}
+.fselect{width:100%;height:40px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:0 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s;cursor:pointer}
+.fselect:focus{border-color:var(--accent)}
+.warn-box{font-size:12px;padding:8px 12px;border-radius:8px;margin-top:8px;display:none}
+.warn-box.show{display:block}
+.warn-box.dup{background:var(--amber-light);color:var(--amber-text)}
+.warn-box.err{background:var(--red-light);color:var(--red-text)}
+
+.doc-card{background:var(--surface2);border-radius:var(--radius);padding:10px 14px;margin-bottom:1.25rem;border:1px solid var(--border)}
+.doc-card-code{font-family:'DM Mono',monospace;font-weight:600;font-size:14px;color:var(--text)}
+.doc-card-name{font-size:12px;color:var(--text-3);margin-top:2px}
+.doc-card-prev{font-size:11px;color:var(--red);margin-top:6px;font-family:'DM Mono',monospace;display:flex;align-items:center;gap:5px}
+
+/* HISTORY rows inside renew modal */
+.history-section{margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem}
+.history-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:8px}
+.history-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.history-item:last-child{border-bottom:none}
+.history-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-3);min-width:80px;flex-shrink:0}
+.history-ver{font-family:'DM Mono',monospace;font-weight:500;color:var(--text);flex-shrink:0}
+
+/* TOAST */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:translateY(0)}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+footer{text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;letter-spacing:.03em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark"><i class="ti ti-road" style="font-size:16px"></i></div>
+    <div>
+      <div class="logo-text">Xochi</div>
+      <div class="logo-sub">Gestión Documental ISO</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-ghost" id="notif-btn" onclick="requestNotifPermission()" style="display:none"><i class="ti ti-bell" style="font-size:13px"></i> Activar alertas</button>
+    <button class="btn-ghost" onclick="exportCSV()"><i class="ti ti-download" style="font-size:13px"></i> Exportar CSV</button>
+    <button class="btn-primary" onclick="openAddModal()"><i class="ti ti-plus" style="font-size:14px"></i> Nuevo documento</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="notif-bar" id="notif-request-bar">
+    <i class="ti ti-bell-ringing" style="font-size:18px;flex-shrink:0"></i>
+    <span>Activa las notificaciones del navegador para recibir alertas de vencimiento aunque el dashboard esté cerrado.</span>
+    <button class="btn-ghost" style="margin-left:auto" onclick="requestNotifPermission()">Activar</button>
+    <button class="btn-ghost" onclick="dismissNotifBar()"><i class="ti ti-x" style="font-size:12px"></i></button>
+  </div>
+
+  <div class="alert-banner" id="alert-banner"></div>
+
+  <div class="metrics" id="metrics-row"></div>
+
+  <div class="main-grid">
+
+    <!-- ═══ LEFT COL: TWO TABLES ═══ -->
+    <div class="left-col">
+
+      <!-- TABLE 1: VIGENCIA / EXPIRY -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="section-label" style="margin-bottom:0">
+            <i class="ti ti-clock-exclamation" style="font-size:16px;color:var(--amber)"></i>
+            Documentos por vencer
+            <span class="pill" style="background:var(--amber-light);color:var(--amber-text)" id="expiry-table-count-pill">0</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <select class="filter-select" id="filter-status-expiry" onchange="renderExpiryTable()">
+              <option value="">Todos los estados</option>
+              <option value="expired">Vencidos</option>
+              <option value="week">Esta semana</option>
+              <option value="biweek">2 semanas</option>
+              <option value="month">1 mes</option>
+            </select>
+            <select class="filter-select" id="filter-area-expiry" onchange="renderExpiryTable()">
+              <option value="">Todas las áreas</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th onclick="sortExpiry('code')">Código <span class="sort-icon" id="se-code"></span></th>
+                <th onclick="sortExpiry('name')">Nombre <span class="sort-icon" id="se-name"></span></th>
+                <th onclick="sortExpiry('version')">Versión <span class="sort-icon" id="se-version"></span></th>
+                <th onclick="sortExpiry('area')">Área <span class="sort-icon" id="se-area"></span></th>
+                <th onclick="sortExpiry('expiry')">Vence <span class="sort-icon" id="se-expiry"></span></th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="expiry-tbody"></tbody>
+          </table>
+          <div class="table-empty" id="expiry-table-empty" style="display:none">
+            <i class="ti ti-circle-check" style="font-size:32px;display:block;margin-bottom:8px;color:var(--green);opacity:.6"></i>
+            Sin documentos próximos a vencer
+          </div>
+        </div>
+        <div class="table-footer"><span id="expiry-table-footer"></span></div>
+      </div>
+
+      <!-- TABLE 2: HISTORIAL COMPLETO -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="section-label" style="margin-bottom:0">
+            <i class="ti ti-history" style="font-size:16px;color:var(--blue)"></i>
+            Historial completo de actualizaciones
+            <span class="pill" style="background:var(--blue-light);color:var(--blue-text)" id="history-count-pill">0</span>
+          </div>
+          <button class="btn-ghost" onclick="exportHistoryCSV()"><i class="ti ti-download" style="font-size:12px"></i> Exportar</button>
+        </div>
+        <div class="docs-toolbar">
+          <input class="search-input" type="text" id="hist-search" placeholder="Buscar código, nombre o responsable…" oninput="renderHistoryTable()"/>
+          <select class="filter-select" id="filter-area-hist" onchange="renderHistoryTable()">
+            <option value="">Todas las áreas</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th onclick="sortHistory('code')">Código <span class="sort-icon" id="sh2-code"></span></th>
+                <th onclick="sortHistory('name')">Nombre <span class="sort-icon" id="sh2-name"></span></th>
+                <th onclick="sortHistory('version')">Versión <span class="sort-icon" id="sh2-version"></span></th>
+                <th onclick="sortHistory('area')">Área <span class="sort-icon" id="sh2-area"></span></th>
+                <th onclick="sortHistory('folder')">Carpeta <span class="sort-icon" id="sh2-folder"></span></th>
+                <th onclick="sortHistory('issued')">Emisión <span class="sort-icon" id="sh2-issued"></span></th>
+                <th onclick="sortHistory('expiry')">Vencimiento <span class="sort-icon" id="sh2-expiry"></span></th>
+                <th onclick="sortHistory('updatedAt')">Actualizado <span class="sort-icon" id="sh2-updatedAt"></span></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+          <div class="table-empty" id="history-table-empty" style="display:none">
+            <i class="ti ti-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:.3"></i>
+            No hay registros todavía
+          </div>
+        </div>
+        <div class="table-footer"><span id="history-table-footer"></span></div>
+      </div>
+
+    </div>
+
+    <!-- ═══ RIGHT COL: SIDEBAR ═══ -->
+    <div class="right-col">
+
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:10px"><i class="ti ti-chart-bar" style="font-size:14px"></i> Documentos por área</div>
+        <div class="area-stats-list" id="area-stats"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:10px"><i class="ti ti-clock-exclamation" style="font-size:14px"></i> Próximos 30 días</div>
+        <div class="expiry-list" id="expiry-sidebar"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<footer>Xochi Autopista &nbsp;·&nbsp; KM142–KM173 CA-2 &nbsp;·&nbsp; ISO 9001 · 14001 · 39001 · 45001 &nbsp;·&nbsp; ENVISION</footer>
+<div class="toast" id="toast"></div>
+
+<!-- ════════════════════════════════════
+     MODAL: NUEVO / EDITAR DOCUMENTO
+════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-add" onclick="bdClose(event,'modal-add',closeAddModal)">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-title" id="add-title"><i class="ti ti-file-plus" style="font-size:18px;color:var(--accent)"></i> Nuevo documento</div>
+    <div class="modal-sub" id="add-sub">Registra un nuevo documento en el sistema de gestión documental.</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Código <span class="req">*</span></label>
+        <input class="finput mono" type="text" id="f-code" placeholder="Ej. ADM-P-001" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label>Área <span class="req">*</span></label>
+        <select class="fselect" id="f-area"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Nombre del documento <span class="req">*</span></label>
+      <input class="finput" type="text" id="f-name" placeholder="Ej. Procedimiento de control de acceso" autocomplete="off"/>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Versión</label>
+        <input class="finput mono" type="text" id="f-version" placeholder="Ej. v1.0"/>
+      </div>
+      <div class="field">
+        <label>Fecha de emisión</label>
+        <input class="finput" type="date" id="f-issued"/>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Fecha de vencimiento</label>
+        <input class="finput" type="date" id="f-expiry"/>
+        <div class="fhint">Dejar vacío si el documento no vence</div>
+      </div>
+      <div class="field">
+        <label>Correo del responsable</label>
+        <input class="finput" type="email" id="f-email" placeholder="gerente@xochi.gt"/>
+        <div class="fhint">Recibirá recordatorios de vencimiento</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Carpeta de almacenamiento <span class="req">*</span></label>
+      <input class="finput" type="text" id="f-folder" placeholder="Ej. SharePoint / Xochi / SGI / Seguridad / Procedimientos" autocomplete="off"/>
+      <div class="fhint">Ruta completa donde se subió el documento (SharePoint, OneDrive, etc.)</div>
+    </div>
+
+    <div class="field">
+      <label>Notas</label>
+      <input class="finput" type="text" id="f-notes" placeholder="Observaciones adicionales (opcional)"/>
+    </div>
+
+    <div class="warn-box dup" id="w-dup">⚠ Ya existe un documento con este código.</div>
+    <div class="warn-box err" id="w-err">⚠ Completa los campos obligatorios: código, área, nombre y carpeta.</div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeAddModal()">Cancelar</button>
+      <button class="btn-primary" id="add-btn" onclick="saveDoc()"><i class="ti ti-check" style="font-size:14px"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MODAL: REGISTRAR ACTUALIZACIÓN
+════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-renew" onclick="bdClose(event,'modal-renew',closeRenewModal)">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title"><i class="ti ti-refresh" style="font-size:18px;color:var(--green)"></i> Registrar actualización</div>
+    <div class="modal-sub">Ingresa la nueva versión y fecha de vencimiento. El historial queda guardado en el mismo documento.</div>
+    <div class="doc-card" id="renew-doc-card"></div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Nueva versión</label>
+        <input class="finput mono" type="text" id="r-version" placeholder="Ej. v2.0"/>
+      </div>
+      <div class="field">
+        <label>Nueva fecha de emisión</label>
+        <input class="finput" type="date" id="r-issued"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Nueva fecha de vencimiento <span class="req">*</span></label>
+      <input class="finput" type="date" id="r-expiry"/>
+    </div>
+    <div class="field">
+      <label>Notas de la actualización</label>
+      <input class="finput" type="text" id="r-notes" placeholder="Ej. Revisado en auditoría interna junio 2026"/>
+    </div>
+
+    <div class="warn-box err" id="r-err">⚠ Ingresa la nueva fecha de vencimiento.</div>
+
+    <!-- Renewal history inside modal -->
+    <div id="renew-history-section" class="history-section" style="display:none">
+      <div class="history-label">Historial de actualizaciones anteriores</div>
+      <div id="renew-history-list"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeRenewModal()">Cancelar</button>
+      <button class="btn-green" onclick="confirmRenew()"><i class="ti ti-refresh" style="font-size:14px"></i> Registrar actualización</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     MODAL: ELIMINAR
+════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-del" onclick="bdClose(event,'modal-del',closeDelModal)">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title"><i class="ti ti-trash" style="font-size:18px;color:var(--red)"></i> Eliminar documento</div>
+    <div class="modal-sub">Esta acción eliminará el documento y todo su historial. No se puede deshacer.</div>
+    <div class="doc-card" id="del-card"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeDelModal()">Cancelar</button>
+      <button class="btn-primary" style="background:var(--red)" onclick="confirmDel()"><i class="ti ti-trash" style="font-size:14px"></i> Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// AREAS
+// ─────────────────────────────────────────
+const AREAS = [
+  { id:'admin',    name:'Administración', color:'#993C1D', bg:'#FAECE7', text:'#4A1B0C' },
+  { id:'comercial',name:'Comercial',      color:'#185FA5', bg:'#DCE9F8', text:'#0D2E5C' },
+  { id:'ops',      name:'Operación',      color:'#0F4C8A', bg:'#D6E6F8', text:'#08305C' },
+  { id:'safety',   name:'Seguridad',      color:'#A32D2D', bg:'#FCEBEB', text:'#501313' },
+  { id:'maint',    name:'Mantenimiento',  color:'#0F6E56', bg:'#D6EDDC', text:'#1A4228' },
+  { id:'env',      name:'Ambiente',       color:'#3B6D11', bg:'#EAF3DE', text:'#173404' },
+  { id:'social',   name:'Social',         color:'#6B3FA0', bg:'#EDE6F8', text:'#3A1F60' },
+  { id:'legal',    name:'Legal',          color:'#854F0B', bg:'#FAEEDA', text:'#412402' },
+];
+const areaById = id => AREAS.find(a => a.id === id);
+
+// ─────────────────────────────────────────
+// STATE
+// Each doc: { id, code, area, name, version, issued, expiry, email, notes, created, updatedAt,
+//             renewHistory: [{date, prevExpiry, prevVersion, version, issued, expiry, notes}] }
+// ─────────────────────────────────────────
+let docs = [];
+let editId = null, renewId = null, delId = null;
+let dismissedAlerts = new Set();
+
+// sort states
+let sortExpiryKey = 'expiry', sortExpiryDir = 1;
+let sortHistKey   = 'updatedAt', sortHistDir = -1;
+
+// ─────────────────────────────────────────
+// PERSIST
+// ─────────────────────────────────────────
+const save = () => localStorage.setItem('xochi_docs3', JSON.stringify(docs));
+const saveDis = () => localStorage.setItem('xochi_dis', JSON.stringify([...dismissedAlerts]));
+function load() {
+  try {
+    const d = localStorage.getItem('xochi_docs3');
+    const dis = localStorage.getItem('xochi_dis');
+    if (d)   docs = JSON.parse(d);
+    if (dis) dismissedAlerts = new Set(JSON.parse(dis));
+  } catch(e) {}
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+// ─────────────────────────────────────────
+// DATE HELPERS
+// ─────────────────────────────────────────
+const todayStr = () => new Date().toISOString().slice(0,10);
+function daysUntil(ds) {
+  if (!ds) return null;
+  return Math.ceil((new Date(ds+'T00:00:00') - new Date(todayStr()+'T00:00:00')) / 86400000);
+}
+function statusOf(doc) {
+  if (!doc.expiry) return 'none';
+  const d = daysUntil(doc.expiry);
+  if (d < 0)  return 'expired';
+  if (d <= 7)  return 'week';
+  if (d <= 14) return 'biweek';
+  if (d <= 31) return 'month';
+  return 'ok';
+}
+function fmtDate(ds) {
+  if (!ds) return '—';
+  const [y,m,d] = ds.split('-');
+  return `${d}/${m}/${y}`;
+}
+function statusBadge(doc) {
+  const s = statusOf(doc);
+  const map = {
+    expired: `<span class="status-badge sb-expired"><i class="ti ti-alert-circle" style="font-size:11px"></i> Vencido</span>`,
+    week:    `<span class="status-badge sb-week"><i class="ti ti-alert-triangle" style="font-size:11px"></i> Esta semana</span>`,
+    biweek:  `<span class="status-badge sb-biweek"><i class="ti ti-clock" style="font-size:11px"></i> 2 semanas</span>`,
+    month:   `<span class="status-badge sb-month"><i class="ti ti-clock" style="font-size:11px"></i> 1 mes</span>`,
+    ok:      `<span class="status-badge sb-ok"><i class="ti ti-circle-check" style="font-size:11px"></i> Vigente</span>`,
+    none:    `<span class="status-badge sb-none">Sin vencimiento</span>`,
+  };
+  return map[s] || '';
+}
+function daysChip(doc) {
+  if (!doc.expiry) return '';
+  const d = daysUntil(doc.expiry);
+  if (d < 0)  return `<span style="color:var(--red);font-weight:500;font-size:11px">${Math.abs(d)}d vencido</span>`;
+  if (d === 0) return `<span style="color:var(--red);font-weight:500;font-size:11px">Hoy</span>`;
+  return `<span style="color:var(--text-3);font-size:11px">en ${d}d</span>`;
+}
+function renewBtnClass(doc) {
+  const s = statusOf(doc);
+  if (s === 'expired') return 'btn-register-update overdue';
+  if (s === 'week')    return 'btn-register-update urgent';
+  return 'btn-register-update';
+}
+
+// ─────────────────────────────────────────
+// BUILD FLAT HISTORY ROWS (one row per version in history + current)
+// ─────────────────────────────────────────
+function buildHistoryRows() {
+  // For each doc, emit one row per historical update + one for the current state
+  const rows = [];
+  docs.forEach(doc => {
+    // past versions from renewHistory
+    (doc.renewHistory || []).forEach(h => {
+      rows.push({
+        docId: doc.id,
+        code: doc.code,
+        name: doc.name || '',
+        area: doc.area,
+        version: h.version || '—',
+        issued:  h.issued  || '',
+        expiry:  h.expiry  || '',
+        notes:   h.notes   || '',
+        updatedAt: h.date  || '',
+        isCurrent: false,
+      });
+    });
+    // current version
+    rows.push({
+      docId: doc.id,
+      code: doc.code,
+      name: doc.name || '',
+      area: doc.area,
+      version:   doc.version   || '—',
+      issued:    doc.issued    || '',
+      expiry:    doc.expiry    || '',
+      folder:    doc.folder    || '',
+      notes:     doc.notes     || '',
+      updatedAt: doc.updatedAt || doc.created || '',
+      isCurrent: true,
+      doc,
+    });
+  });
+  return rows;
+}
+
+// ─────────────────────────────────────────
+// ALERTS
+// ─────────────────────────────────────────
+function renderAlerts() {
+  const groups = { expired:[], week:[], biweek:[], month:[] };
+  docs.forEach(d => {
+    const s = statusOf(d);
+    if (s === 'ok' || s === 'none') return;
+    if (!dismissedAlerts.has(d.id+'-'+s)) groups[s].push(d);
+  });
+  const cfg = {
+    expired: { cls:'expired', icon:'ti-alert-circle',   title:'Documentos vencidos — requieren actualización inmediata' },
+    week:    { cls:'week',    icon:'ti-alert-triangle',  title:'Vencen esta semana (≤ 7 días)' },
+    biweek:  { cls:'biweek',  icon:'ti-clock',           title:'Vencen en los próximos 14 días' },
+    month:   { cls:'month',   icon:'ti-bell',            title:'Vencen en el próximo mes' },
+  };
+  let html = '';
+  ['expired','week','biweek','month'].forEach(k => {
+    if (!groups[k].length) return;
+    const c = cfg[k];
+    const items = groups[k].map(d => {
+      const a = areaById(d.area);
+      return `<div class="alert-item">
+        <span class="alert-item-code">${d.code}</span>
+        <span style="color:var(--text-3)">·</span><span>${d.name}</span>
+        <span style="color:var(--text-3)">·</span>
+        <span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;background:${a?.bg};color:${a?.text};padding:1px 7px;border-radius:99px">${a?.name}</span>
+        ${k!=='expired'?`<span class="td-mono">${fmtDate(d.expiry)}</span>`:''}
+        <button class="btn-register-update ${k==='expired'?'overdue':k==='week'?'urgent':''}" style="padding:3px 9px;font-size:11px" onclick="openRenewModal('${d.id}')"><i class="ti ti-refresh" style="font-size:11px"></i> Registrar actualización</button>
+      </div>`;
+    }).join('');
+    html += `<div class="alert-card ${c.cls}">
+      <i class="ti ${c.icon} alert-icon"></i>
+      <div class="alert-body"><div class="alert-title">${c.title}</div><div class="alert-items">${items}</div></div>
+      <button class="alert-dismiss" onclick="dismissGroup('${k}',[${groups[k].map(d=>`'${d.id}'`).join(',')}])" title="Ocultar"><i class="ti ti-x" style="font-size:14px"></i></button>
+    </div>`;
+  });
+  document.getElementById('alert-banner').innerHTML = html;
+}
+function dismissGroup(status, ids) {
+  ids.forEach(id => dismissedAlerts.add(id+'-'+status));
+  saveDis(); renderAlerts();
+}
+
+// ─────────────────────────────────────────
+// METRICS
+// ─────────────────────────────────────────
+function renderMetrics() {
+  const total   = docs.length;
+  const expired = docs.filter(d => statusOf(d)==='expired').length;
+  const due30   = docs.filter(d => { const s=statusOf(d); return s==='week'||s==='biweek'||s==='month'; }).length;
+  const ok      = docs.filter(d => statusOf(d)==='ok').length;
+  const updates = docs.reduce((s,d) => s + (d.renewHistory?.length||0), 0);
+
+  document.getElementById('metrics-row').innerHTML = `
+    <div class="metric"><div class="metric-label"><i class="ti ti-files" style="font-size:11px"></i>Total docs</div><div class="metric-value">${total}</div><div class="metric-sub">${AREAS.length} áreas</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-circle-check" style="font-size:11px"></i>Vigentes</div><div class="metric-value mv-green">${ok}</div><div class="metric-sub">activos y al día</div></div>
+    <div class="metric clickable" onclick="document.getElementById('filter-status-expiry').value='expired';renderExpiryTable()"><div class="metric-label"><i class="ti ti-alert-circle" style="font-size:11px"></i>Vencidos</div><div class="metric-value mv-red">${expired}</div><div class="metric-sub">requieren acción</div></div>
+    <div class="metric clickable" onclick="document.getElementById('filter-status-expiry').value='';renderExpiryTable()"><div class="metric-label"><i class="ti ti-clock" style="font-size:11px"></i>Por vencer (30d)</div><div class="metric-value mv-amber">${due30}</div><div class="metric-sub">requieren atención</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-history" style="font-size:11px"></i>Actualizaciones</div><div class="metric-value mv-blue">${updates}</div><div class="metric-sub">en el historial</div></div>`;
+}
+
+// ─────────────────────────────────────────
+// TABLE 1: EXPIRY TABLE
+// Shows only docs with expiry date, sorted by urgency
+// ─────────────────────────────────────────
+function sortExpiry(key) {
+  if (sortExpiryKey === key) sortExpiryDir *= -1; else { sortExpiryKey=key; sortExpiryDir=1; }
+  renderExpiryTable();
+}
+function renderExpiryTable() {
+  const fs  = document.getElementById('filter-status-expiry').value;
+  const fa  = document.getElementById('filter-area-expiry').value;
+  ['code','name','version','area','expiry'].forEach(k => {
+    const el = document.getElementById('se-'+k); if(el) el.textContent = sortExpiryKey===k?(sortExpiryDir===1?'↑':'↓'):'';
+  });
+
+  // Only docs expiring within 31 days (or already expired). 'ok' and 'none' excluded.
+  let rows = docs.filter(d => {
+    if (!d.expiry) return false;
+    const s = statusOf(d);
+    if (s === 'ok' || s === 'none') return false; // ≤31d only
+    if (fs && s !== fs) return false;
+    if (fa && d.area !== fa) return false;
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    let av, bv;
+    if (sortExpiryKey==='code')    { av=a.code;    bv=b.code; }
+    else if (sortExpiryKey==='name')    { av=a.name||'';  bv=b.name||''; }
+    else if (sortExpiryKey==='version') { av=a.version||''; bv=b.version||''; }
+    else if (sortExpiryKey==='area')    { av=areaById(a.area)?.name||''; bv=areaById(b.area)?.name||''; }
+    else if (sortExpiryKey==='expiry')  { av=a.expiry||'9999'; bv=b.expiry||'9999'; }
+    else { av=''; bv=''; }
+    return av < bv ? -sortExpiryDir : av > bv ? sortExpiryDir : 0;
+  });
+
+  const tbody = document.getElementById('expiry-tbody');
+  const empty = document.getElementById('expiry-table-empty');
+  document.getElementById('expiry-table-count-pill').textContent = rows.length;
+  document.getElementById('expiry-table-footer').textContent = `${rows.length} documento${rows.length!==1?'s':''}`;
+
+  if (!rows.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+
+  tbody.innerHTML = rows.map(doc => {
+    const a = areaById(doc.area);
+    const btnCls = renewBtnClass(doc);
+    return `<tr>
+      <td class="td-code">${doc.code}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${doc.name||''}">${doc.name||'<span style="color:var(--text-3);font-style:italic">—</span>'}</td>
+      <td class="td-mono">${doc.version||'—'}</td>
+      <td><span class="area-pill" style="background:${a?.bg};color:${a?.text}"><span class="area-dot" style="background:${a?.color}"></span>${a?.name}</span></td>
+      <td class="td-mono">${fmtDate(doc.expiry)}<br>${daysChip(doc)}</td>
+      <td>${statusBadge(doc)}</td>
+      <td>
+        <div class="td-actions">
+          <button class="${btnCls}" onclick="openRenewModal('${doc.id}')"><i class="ti ti-refresh" style="font-size:13px"></i> Registrar actualización</button>
+          <button class="icon-btn edit" onclick="openEditModal('${doc.id}')" title="Editar"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+          <button class="icon-btn del"  onclick="openDelModal('${doc.id}')"  title="Eliminar"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// TABLE 2: FULL HISTORY TABLE
+// One row per version (past + current) for all docs
+// ─────────────────────────────────────────
+function sortHistory(key) {
+  if (sortHistKey === key) sortHistDir *= -1; else { sortHistKey=key; sortHistDir=1; }
+  renderHistoryTable();
+}
+function renderHistoryTable() {
+  const q  = document.getElementById('hist-search').value.toLowerCase();
+  const fa = document.getElementById('filter-area-hist').value;
+  ['code','name','version','area','folder','issued','expiry','updatedAt'].forEach(k => {
+    const el = document.getElementById('sh2-'+k); if(el) el.textContent = sortHistKey===k?(sortHistDir===1?'↑':'↓'):'';
+  });
+
+  let rows = buildHistoryRows().filter(r => {
+    if (q && !r.code.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q) && !(r.notes||'').toLowerCase().includes(q)) return false;
+    if (fa && r.area !== fa) return false;
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    let av=a[sortHistKey]||'', bv=b[sortHistKey]||'';
+    return av < bv ? -sortHistDir : av > bv ? sortHistDir : 0;
+  });
+
+  const total = buildHistoryRows().length; // total before filter
+  document.getElementById('history-count-pill').textContent = total;
+  document.getElementById('history-table-footer').textContent = `${rows.length} de ${total} registro${total!==1?'s':''}`;
+
+  const tbody = document.getElementById('history-tbody');
+  const empty = document.getElementById('history-table-empty');
+
+  if (!rows.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = rows.map(r => {
+    const a = areaById(r.area);
+    const curBadge = r.isCurrent
+      ? `<span style="display:inline-flex;align-items:center;font-size:10px;font-weight:600;background:var(--green-light);color:var(--green-text);padding:2px 7px;border-radius:99px;margin-left:4px">actual</span>`
+      : `<span style="display:inline-flex;align-items:center;font-size:10px;background:var(--surface2);color:var(--text-3);padding:2px 7px;border-radius:99px;margin-left:4px">anterior</span>`;
+    return `<tr style="${!r.isCurrent?'opacity:.72':''}">
+      <td class="td-code">${r.code}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.name}">${r.name||'<span style="color:var(--text-3);font-style:italic">—</span>'}</td>
+      <td class="td-mono" style="white-space:nowrap">${r.version}${curBadge}</td>
+      <td><span class="area-pill" style="background:${a?.bg};color:${a?.text}"><span class="area-dot" style="background:${a?.color}"></span>${a?.name}</span></td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text-3)" title="${r.folder||''}">${r.folder||'—'}</td>
+      <td class="td-mono">${fmtDate(r.issued)}</td>
+      <td class="td-mono">${fmtDate(r.expiry)}</td>
+      <td class="td-mono">${fmtDate(r.updatedAt)}</td>
+      <td>
+        ${r.isCurrent ? `<div class="td-actions">
+          <button class="icon-btn edit" onclick="openEditModal('${r.docId}')" title="Editar"><i class="ti ti-pencil" style="font-size:13px"></i></button>
+          <button class="icon-btn del"  onclick="openDelModal('${r.docId}')"  title="Eliminar"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </div>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// SIDEBAR: AREA STATS
+// ─────────────────────────────────────────
+function renderAreaStats() {
+  const max = Math.max(1, ...AREAS.map(a => docs.filter(d=>d.area===a.id).length));
+  document.getElementById('area-stats').innerHTML = AREAS.map(a => {
+    const cnt    = docs.filter(d=>d.area===a.id).length;
+    const alerts = docs.filter(d=>d.area===a.id && ['expired','week','biweek'].includes(statusOf(d))).length;
+    const pct    = Math.round(cnt/max*100);
+    return `<div class="astat-row" onclick="document.getElementById('filter-area-expiry').value='${a.id}';renderExpiryTable()">
+      <div class="astat-dot" style="background:${a.color}"></div>
+      <div class="astat-name" title="${a.name}">${a.name}</div>
+      <div class="astat-track"><div class="astat-fill" style="width:${pct}%;background:${a.color}"></div></div>
+      <div class="astat-count">${cnt}</div>
+      ${alerts?`<div class="astat-alert"><i class="ti ti-alert-triangle" style="font-size:11px"></i></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// SIDEBAR: UPCOMING EXPIRY LIST
+// ─────────────────────────────────────────
+function renderExpirySidebar() {
+  const upcoming = docs
+    .filter(d => d.expiry)
+    .map(d => ({ ...d, days: daysUntil(d.expiry) }))
+    .filter(d => d.days !== null && d.days <= 31)
+    .sort((a,b) => a.days - b.days)
+    .slice(0, 8);
+
+  const el = document.getElementById('expiry-sidebar');
+  if (!upcoming.length) {
+    el.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-3);font-size:13px"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:8px;color:var(--green)"></i>Sin vencimientos próximos</div>';
+    return;
+  }
+  el.innerHTML = upcoming.map(d => {
+    const a   = areaById(d.area);
+    const s   = statusOf(d);
+    const clr = s==='expired'?'var(--red)':s==='week'?'var(--accent)':s==='biweek'?'var(--amber)':'var(--blue)';
+    const lbl = d.days<0?`${Math.abs(d.days)}d vencido`:d.days===0?'Hoy':`${d.days}d`;
+    return `<div class="expiry-item" onclick="openRenewModal('${d.id}')">
+      <div class="expiry-code">${d.code} <span style="font-weight:400;font-size:11px;color:var(--text-3)">${d.version||''}</span></div>
+      <div class="expiry-name" title="${d.name||''}">${d.name||'—'}</div>
+      <div class="expiry-meta">
+        <span class="area-pill" style="background:${a?.bg};color:${a?.text};font-size:10px"><span class="area-dot" style="background:${a?.color}"></span>${a?.name}</span>
+        <span class="expiry-days" style="color:${clr}">${lbl}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────
+// ADD / EDIT MODAL
+// ─────────────────────────────────────────
+function populateAreaSelects() {
+  ['f-area'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Seleccionar…</option>';
+    AREAS.forEach(a => { const o=document.createElement('option'); o.value=a.id; o.textContent=a.name; sel.appendChild(o); });
+  });
+}
+function populateFilterSelects() {
+  ['filter-area-expiry','filter-area-hist'].forEach(id => {
+    const sel = document.getElementById(id);
+    AREAS.forEach(a => { const o=document.createElement('option'); o.value=a.id; o.textContent=a.name; sel.appendChild(o); });
+  });
+}
+
+function openAddModal() {
+  editId = null;
+  clearAddForm();
+  document.getElementById('add-title').innerHTML = '<i class="ti ti-file-plus" style="font-size:18px;color:var(--accent)"></i> Nuevo documento';
+  document.getElementById('add-sub').textContent  = 'Registra un nuevo documento en el sistema de gestión documental.';
+  document.getElementById('add-btn').innerHTML    = '<i class="ti ti-check" style="font-size:14px"></i> Guardar';
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(() => document.getElementById('f-code').focus(), 120);
+}
+function openEditModal(id) {
+  editId = id;
+  const d = docs.find(x=>x.id===id); if(!d) return;
+  document.getElementById('f-code').value    = d.code;
+  document.getElementById('f-area').value    = d.area;
+  document.getElementById('f-name').value    = d.name||'';
+  document.getElementById('f-version').value = d.version||'';
+  document.getElementById('f-issued').value  = d.issued||'';
+  document.getElementById('f-expiry').value  = d.expiry||'';
+  document.getElementById('f-email').value   = d.email||'';
+  document.getElementById('f-folder').value  = d.folder||'';
+  document.getElementById('f-notes').value   = d.notes||'';
+  document.getElementById('w-dup').classList.remove('show');
+  document.getElementById('w-err').classList.remove('show');
+  document.getElementById('add-title').innerHTML = '<i class="ti ti-pencil" style="font-size:18px;color:var(--blue)"></i> Editar documento';
+  document.getElementById('add-sub').textContent  = 'Modifica los datos del documento seleccionado.';
+  document.getElementById('add-btn').innerHTML    = '<i class="ti ti-check" style="font-size:14px"></i> Actualizar';
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(() => document.getElementById('f-name').focus(), 120);
+}
+function closeAddModal() { document.getElementById('modal-add').classList.remove('open'); editId=null; }
+function clearAddForm() {
+  ['f-code','f-area','f-name','f-version','f-issued','f-expiry','f-email','f-folder','f-notes'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('w-dup').classList.remove('show');
+  document.getElementById('w-err').classList.remove('show');
+}
+function saveDoc() {
+  const code    = document.getElementById('f-code').value.trim().toUpperCase();
+  const area    = document.getElementById('f-area').value;
+  const name    = document.getElementById('f-name').value.trim();
+  const version = document.getElementById('f-version').value.trim();
+  const issued  = document.getElementById('f-issued').value;
+  const expiry  = document.getElementById('f-expiry').value;
+  const email   = document.getElementById('f-email').value.trim();
+  const folder  = document.getElementById('f-folder').value.trim();
+  const notes   = document.getElementById('f-notes').value.trim();
+
+  document.getElementById('w-dup').classList.remove('show');
+  document.getElementById('w-err').classList.remove('show');
+
+  if (!code||!area||!name||!folder) { document.getElementById('w-err').classList.add('show'); return; }
+  if (docs.find(d=>d.code===code && d.id!==editId)) { document.getElementById('w-dup').classList.add('show'); return; }
+
+  const now = todayStr();
+  const isNew = !editId;
+
+  if (editId) {
+    const idx = docs.findIndex(d=>d.id===editId);
+    if (idx>-1) docs[idx] = {...docs[idx], code, area, name, version, issued, expiry, email, folder, notes, updatedAt:now};
+  } else {
+    docs.push({ id:uid(), code, area, name, version, issued, expiry, email, folder, notes, created:now, updatedAt:now, renewHistory:[] });
+  }
+
+  save(); renderAll(); closeAddModal();
+  showToast(isNew ? `Documento ${code} registrado` : `Documento ${code} actualizado`);
+  scheduleNotifCheck();
+
+  // ── Notificar al gerente responsable solo al registrar un documento NUEVO
+  if (isNew && email) {
+    sendNewDocEmail({ code, area, name, version, issued, expiry, email, folder, notes });
+  }
+}
+
+// ─────────────────────────────────────────
+// RENEW MODAL
+// ─────────────────────────────────────────
+function openRenewModal(id) {
+  renewId = id;
+  const d = docs.find(x=>x.id===id); if(!d) return;
+  const a = areaById(d.area);
+  document.getElementById('renew-doc-card').innerHTML = `
+    <div class="doc-card-code">${d.code} <span style="font-size:11px;font-weight:400;color:var(--text-3)">${d.version||''}</span></div>
+    <div class="doc-card-name">${d.name||''}</div>
+    <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="area-pill" style="background:${a?.bg};color:${a?.text};font-size:11px"><span class="area-dot" style="background:${a?.color}"></span>${a?.name}</span>
+      ${d.expiry?`<div class="doc-card-prev"><i class="ti ti-calendar-x" style="font-size:11px"></i> Vence: ${fmtDate(d.expiry)}${daysUntil(d.expiry)<0?' (VENCIDO)':''}</div>`:''}
+    </div>`;
+  document.getElementById('r-version').value = '';
+  document.getElementById('r-issued').value  = todayStr();
+  document.getElementById('r-expiry').value  = '';
+  document.getElementById('r-notes').value   = '';
+  document.getElementById('r-err').style.display = 'none';
+
+  // Render past history inside modal
+  const hist = d.renewHistory || [];
+  const hsec = document.getElementById('renew-history-section');
+  if (hist.length) {
+    hsec.style.display = 'block';
+    document.getElementById('renew-history-list').innerHTML = [...hist].reverse().map(h=>`
+      <div class="history-item">
+        <div class="history-date">${fmtDate(h.date)}</div>
+        <div class="history-ver">${h.version||'—'}</div>
+        <div style="flex:1;font-size:12px;color:var(--text-3)">${h.notes||''} ${h.expiry?'· vencía '+fmtDate(h.expiry):''}</div>
+      </div>`).join('');
+  } else hsec.style.display = 'none';
+
+  document.getElementById('modal-renew').classList.add('open');
+  setTimeout(() => document.getElementById('r-expiry').focus(), 120);
+}
+function closeRenewModal() { document.getElementById('modal-renew').classList.remove('open'); renewId=null; }
+function confirmRenew() {
+  const newExpiry  = document.getElementById('r-expiry').value;
+  const newVersion = document.getElementById('r-version').value.trim();
+  const newIssued  = document.getElementById('r-issued').value;
+  const notes      = document.getElementById('r-notes').value.trim();
+  if (!newExpiry) { document.getElementById('r-err').style.display='block'; return; }
+  const idx = docs.findIndex(d=>d.id===renewId); if(idx<0) return;
+  const old = docs[idx];
+  if (!docs[idx].renewHistory) docs[idx].renewHistory = [];
+  // store snapshot of OLD version in history
+  docs[idx].renewHistory.push({
+    date:     todayStr(),
+    version:  old.version  || '—',
+    issued:   old.issued   || '',
+    expiry:   old.expiry   || '',
+    notes,
+  });
+  // update current
+  docs[idx].expiry    = newExpiry;
+  docs[idx].updatedAt = todayStr();
+  if (newVersion) docs[idx].version = newVersion;
+  if (newIssued)  docs[idx].issued  = newIssued;
+  // clear dismissed alerts so new alerts show
+  ['expired','week','biweek','month'].forEach(s => dismissedAlerts.delete(docs[idx].id+'-'+s));
+  saveDis();
+  save(); renderAll(); closeRenewModal();
+  showToast(`Actualización registrada — ${docs[idx].code} vence ${fmtDate(newExpiry)}`);
+  scheduleNotifCheck();
+}
+
+// ─────────────────────────────────────────
+// DELETE MODAL
+// ─────────────────────────────────────────
+function openDelModal(id) {
+  delId = id;
+  const d = docs.find(x=>x.id===id); if(!d) return;
+  const a = areaById(d.area);
+  document.getElementById('del-card').innerHTML = `
+    <div class="doc-card-code">${d.code}</div>
+    <div class="doc-card-name">${d.name||''}</div>
+    <div style="margin-top:6px"><span class="area-pill" style="background:${a?.bg};color:${a?.text};font-size:11px"><span class="area-dot" style="background:${a?.color}"></span>${a?.name}</span></div>
+    ${(d.renewHistory?.length)?`<div style="font-size:11px;color:var(--amber);margin-top:8px;font-style:italic">⚠ Contiene ${d.renewHistory.length} actualización${d.renewHistory.length>1?'es':''} en el historial</div>`:''}`;
+  document.getElementById('modal-del').classList.add('open');
+}
+function closeDelModal() { document.getElementById('modal-del').classList.remove('open'); delId=null; }
+function confirmDel() {
+  const d = docs.find(x=>x.id===delId); if(!d) return;
+  docs = docs.filter(x=>x.id!==delId);
+  save(); renderAll(); closeDelModal();
+  showToast(`Documento ${d.code} eliminado`);
+}
+
+// ─────────────────────────────────────────
+// POWER AUTOMATE — CORREO NUEVO DOCUMENTO
+// ─────────────────────────────────────────
+// Pega aquí la URL del flujo HTTP de Power Automate.
+// Instrucciones: ver sección al final del archivo.
+const POWER_AUTOMATE_URL = ''; // ← pega tu URL aquí
+
+async function sendNewDocEmail(doc) {
+  if (!POWER_AUTOMATE_URL) {
+    console.warn('Xochi: POWER_AUTOMATE_URL no configurada. El correo no se envió.');
+    showToast('⚠ Configura la URL de Power Automate para enviar correos automáticos.');
+    return;
+  }
+  const a = areaById(doc.area);
+  const payload = {
+    codigo:       doc.code,
+    nombre:       doc.name,
+    area:         a?.name || doc.area,
+    version:      doc.version || '—',
+    fechaEmision: doc.issued  ? fmtDate(doc.issued)  : '—',
+    fechaVencimiento: doc.expiry ? fmtDate(doc.expiry) : 'Sin vencimiento',
+    carpeta:      doc.folder,
+    correoGerente: doc.email,
+    notas:        doc.notes || '—',
+    fechaRegistro: fmtDate(todayStr()),
+  };
+  try {
+    const res = await fetch(POWER_AUTOMATE_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    if (res.ok) {
+      showToast(`✉ Correo de notificación enviado a ${doc.email}`);
+    } else {
+      showToast(`⚠ El correo no se pudo enviar (error ${res.status})`);
+    }
+  } catch(e) {
+    showToast('⚠ Error de conexión al enviar correo. Revisa la URL de Power Automate.');
+    console.error('sendNewDocEmail error:', e);
+  }
+}
+
+// ─────────────────────────────────────────
+// BROWSER NOTIFICATIONS
+// ─────────────────────────────────────────
+function initNotifBar() {
+  if (!('Notification' in window)) { document.getElementById('notif-request-bar').classList.add('hidden'); return; }
+  if (Notification.permission==='granted') {
+    document.getElementById('notif-request-bar').classList.add('hidden');
+    document.getElementById('notif-btn').style.display='none';
+    scheduleNotifCheck();
+  } else if (Notification.permission==='denied') {
+    document.getElementById('notif-request-bar').classList.add('hidden');
+    document.getElementById('notif-btn').style.display='none';
+  }
+}
+function dismissNotifBar() {
+  document.getElementById('notif-request-bar').classList.add('hidden');
+  localStorage.setItem('xochi_notif_dismissed','1');
+}
+function requestNotifPermission() {
+  Notification.requestPermission().then(p => {
+    document.getElementById('notif-request-bar').classList.add('hidden');
+    document.getElementById('notif-btn').style.display='none';
+    if (p==='granted') { showToast('Notificaciones activadas'); scheduleNotifCheck(); }
+    else showToast('Notificaciones denegadas en el navegador');
+  });
+}
+function scheduleNotifCheck() {
+  if (Notification.permission!=='granted') return;
+  const sent = JSON.parse(localStorage.getItem('xochi_notif_sent')||'{}');
+  const dk = todayStr();
+  docs.forEach(d => {
+    if (!d.expiry) return;
+    const days = daysUntil(d.expiry);
+    const triggers = [];
+    if (days===30) triggers.push({lv:'month',  label:'vence en 1 mes'});
+    if (days===14) triggers.push({lv:'biweek', label:'vence en 2 semanas'});
+    if (days===7)  triggers.push({lv:'week',   label:'vence en 1 semana'});
+    if (days===0)  triggers.push({lv:'today',  label:'vence HOY'});
+    if (days < 0)  triggers.push({lv:'overdue',label:`VENCIDO hace ${Math.abs(days)} días`});
+    triggers.forEach(t => {
+      const key = `${d.id}-${t.lv}-${dk}`;
+      if (sent[key]) return;
+      new Notification('Xochi — Documento por actualizar', {
+        body: `${d.code} · ${d.name||''} — ${t.label}`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="%23C4520A"/><text x="16" y="22" text-anchor="middle" font-size="18" fill="white">X</text></svg>'
+      });
+      sent[key] = 1;
+    });
+  });
+  localStorage.setItem('xochi_notif_sent', JSON.stringify(sent));
+}
+
+// ─────────────────────────────────────────
+// CSV EXPORTS
+// ─────────────────────────────────────────
+function exportCSV() {
+  const headers = ['Código','Nombre','Área','Versión','Carpeta','Fecha Emisión','Fecha Vencimiento','Días al Vencimiento','Estado','Correo Responsable','Notas','Fecha Registro'];
+  const rows = docs.map(d => {
+    const a = areaById(d.area);
+    const stMap = {ok:'Vigente',expired:'Vencido',week:'Vence esta semana',biweek:'Vence en 2 semanas',month:'Vence en 1 mes',none:'Sin vencimiento'};
+    return [d.code, d.name||'', a?.name||'', d.version||'', d.folder||'', d.issued||'', d.expiry||'', d.expiry?daysUntil(d.expiry):'', stMap[statusOf(d)], d.email||'', d.notes||'', d.created||''];
+  });
+  downloadCSV([headers,...rows], `xochi-documentos-${todayStr()}.csv`);
+  showToast('CSV exportado — listo para Power Automate');
+}
+function exportHistoryCSV() {
+  const headers = ['Código','Nombre','Área','Versión','Carpeta','Fecha Emisión','Fecha Vencimiento','Fecha Actualización','Notas','Tipo'];
+  const rows = buildHistoryRows().map(r => {
+    const a = areaById(r.area);
+    return [r.code, r.name, a?.name||'', r.version, r.folder||'', r.issued, r.expiry, r.updatedAt, r.notes, r.isCurrent?'Actual':'Anterior'];
+  });
+  downloadCSV([headers,...rows], `xochi-historial-${todayStr()}.csv`);
+  showToast('Historial exportado como CSV');
+}
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+}
+
+// ─────────────────────────────────────────
+// MODAL UTILS
+// ─────────────────────────────────────────
+function bdClose(e, id, fn) { if (e.target.id===id) fn(); }
+document.addEventListener('keydown', e => {
+  if (e.key!=='Escape') return;
+  if (document.getElementById('modal-add').classList.contains('open'))   closeAddModal();
+  if (document.getElementById('modal-renew').classList.contains('open')) closeRenewModal();
+  if (document.getElementById('modal-del').classList.contains('open'))   closeDelModal();
+});
+
+// ─────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+// ─────────────────────────────────────────
+// RENDER ALL
+// ─────────────────────────────────────────
+function renderAll() {
+  renderAlerts();
+  renderMetrics();
+  renderExpiryTable();
+  renderHistoryTable();
+  renderAreaStats();
+  renderExpirySidebar();
+}
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+load();
+populateAreaSelects();
+populateFilterSelects();
+initNotifBar();
+if (localStorage.getItem('xochi_notif_dismissed')) document.getElementById('notif-request-bar').classList.add('hidden');
+renderAll();
+scheduleNotifCheck();
+</script>
+
+<!--
+════════════════════════════════════════════════════════════════
+INSTRUCCIONES: CONFIGURAR POWER AUTOMATE PARA CORREO DE NUEVO DOCUMENTO
+════════════════════════════════════════════════════════════════
+
+PASO 1 — Crear el flujo en Power Automate
+  1. Ve a https://make.powerautomate.com
+  2. Clic en "Crear" → "Flujo de nube instantáneo"
+  3. Nombre: "Xochi - Notificación nuevo documento"
+  4. Trigger: busca "Cuando se recibe una solicitud HTTP" (conector "Solicitud")
+  5. Haz clic en "Crear"
+
+PASO 2 — Configurar el trigger HTTP
+  En el bloque "Cuando se recibe una solicitud HTTP":
+  1. Haz clic en "Usar carga de solicitud de muestra para generar esquema"
+  2. Pega este JSON de muestra y haz clic en "Listo":
+
+  {
+    "codigo": "SEG-P-001",
+    "nombre": "Procedimiento de respuesta ante incidentes",
+    "area": "Seguridad",
+    "version": "v1.0",
+    "fechaEmision": "01/08/2026",
+    "fechaVencimiento": "01/08/2027",
+    "carpeta": "SharePoint / Xochi / SGI / Seguridad",
+    "correoGerente": "gerente.seguridad@xochi.gt",
+    "notas": "Revisado por auditoría interna",
+    "fechaRegistro": "04/08/2026"
+  }
+
+  3. Guarda el flujo y copia la "URL HTTP POST" que aparece en el bloque.
+
+PASO 3 — Agregar la acción de correo
+  1. Haz clic en "+ Nuevo paso"
+  2. Busca "Send an email (V2)" (Outlook)
+  3. Configura:
+     - Para:    @{triggerBody()?['correoGerente']}
+     - Asunto:  Nuevo documento registrado — @{triggerBody()?['codigo']}
+     - Cuerpo (HTML activado):
+
+  <p>Estimado/a Gerente de <strong>@{triggerBody()?['area']}</strong>,</p>
+  <p>Se ha registrado un nuevo documento en el sistema de gestión documental de Xochi.</p>
+  <table style="border-collapse:collapse;font-family:sans-serif;font-size:13px">
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Código</td><td style="padding:6px 12px">@{triggerBody()?['codigo']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Nombre</td><td style="padding:6px 12px">@{triggerBody()?['nombre']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Área</td><td style="padding:6px 12px">@{triggerBody()?['area']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Versión</td><td style="padding:6px 12px">@{triggerBody()?['version']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Carpeta</td><td style="padding:6px 12px">@{triggerBody()?['carpeta']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Fecha de emisión</td><td style="padding:6px 12px">@{triggerBody()?['fechaEmision']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Fecha de vencimiento</td><td style="padding:6px 12px">@{triggerBody()?['fechaVencimiento']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Notas</td><td style="padding:6px 12px">@{triggerBody()?['notas']}</td></tr>
+    <tr><td style="padding:6px 12px;background:#f5f0ea;font-weight:600">Registrado</td><td style="padding:6px 12px">@{triggerBody()?['fechaRegistro']}</td></tr>
+  </table>
+  <p style="margin-top:16px;color:#6b6355;font-size:12px">Este correo fue generado automáticamente por el sistema de gestión documental de Xochi.<br>ISO 9001 · 14001 · 39001 · 45001 · ENVISION</p>
+
+PASO 4 — Guardar la URL en el dashboard
+  1. Guarda el flujo
+  2. Copia la URL HTTP POST del trigger
+  3. Abre este archivo HTML en un editor de texto
+  4. Busca la línea:  const POWER_AUTOMATE_URL = '';
+  5. Pega tu URL entre las comillas:
+     const POWER_AUTOMATE_URL = 'https://prod-xx.westus.logic.azure.com:443/...';
+  6. Guarda el archivo
+
+LISTO — Cada vez que se registre un documento nuevo, el sistema enviará
+automáticamente un correo al gerente con todos los datos de registro.
+════════════════════════════════════════════════════════════════
+-->
+</body>
+</html>
