@@ -221,9 +221,17 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 footer{text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace;letter-spacing:.03em}
+
+/* LOADING BAR */
+#loading-bar{display:none;position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;background:linear-gradient(90deg,var(--accent) 0%,#E8731A 50%,var(--accent) 100%);background-size:200%;animation:shimmer 1.2s linear infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+#saving-indicator{font-size:11px;color:var(--text-3);font-family:'DM Mono',monospace}
+.offline-banner{background:var(--amber-light);border:1px solid rgba(138,90,0,.2);border-radius:var(--radius-lg);padding:10px 14px;display:none;align-items:center;gap:10px;margin-bottom:1.25rem;font-size:12px;color:var(--amber-text)}
 </style>
 </head>
 <body>
+
+<div id="loading-bar"></div>
 
 <header>
   <div class="logo">
@@ -237,10 +245,17 @@ footer{text-align:center;padding:2rem 0 1rem;font-size:11px;color:var(--text-3);
     <button class="btn-ghost" id="notif-btn" onclick="requestNotifPermission()" style="display:none"><i class="ti ti-bell" style="font-size:13px"></i> Activar alertas</button>
     <button class="btn-ghost" onclick="exportCSV()"><i class="ti ti-download" style="font-size:13px"></i> Exportar CSV</button>
     <button class="btn-primary" onclick="openAddModal()"><i class="ti ti-plus" style="font-size:14px"></i> Nuevo documento</button>
+    <span id="saving-indicator"></span>
   </div>
 </header>
 
 <div class="page">
+
+  <!-- OFFLINE / NO API BANNER -->
+  <div class="offline-banner" id="offline-banner">
+    <i class="ti ti-wifi-off" style="font-size:18px;flex-shrink:0"></i>
+    <span>Google Sheets no está configurado. Los datos se guardan solo en este navegador. Configura <code>SHEETS_API_URL</code> para habilitar el almacenamiento compartido.</span>
+  </div>
 
   <div class="notif-bar" id="notif-request-bar">
     <i class="ti ti-bell-ringing" style="font-size:18px;flex-shrink:0"></i>
@@ -522,18 +537,137 @@ let sortExpiryKey = 'expiry', sortExpiryDir = 1;
 let sortHistKey   = 'updatedAt', sortHistDir = -1;
 
 // ─────────────────────────────────────────
-// PERSIST
+// CONFIGURACIÓN GOOGLE SHEETS
+// Pega aquí la URL de tu Google Apps Script desplegado.
+// Instrucciones al final del archivo.
 // ─────────────────────────────────────────
-const save = () => localStorage.setItem('xochi_docs3', JSON.stringify(docs));
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbxd1Kv5E_xQpf8dWhjgc6Ckh2vEsUmSKuYwF5_x4psRzix83Gfe4ZSa9qApZMKNv3z6QQ/exec'; // ← pega tu URL aquí
+
+// ─────────────────────────────────────────
+// ESTADO DE CARGA
+// ─────────────────────────────────────────
+let isLoading = false;
+let isSaving  = false;
+
+function setLoading(on) {
+  isLoading = on;
+  const el = document.getElementById('loading-bar');
+  if (el) el.style.display = on ? 'block' : 'none';
+}
+function setSaving(on) {
+  isSaving = on;
+  const el = document.getElementById('saving-indicator');
+  if (el) el.textContent = on ? '⏳ Guardando…' : '';
+}
+
+// ─────────────────────────────────────────
+// API — llamadas al Apps Script
+// ─────────────────────────────────────────
+async function apiCall(action, payload = {}) {
+  if (!SHEETS_API_URL) {
+    // Sin API configurada: usar localStorage como fallback
+    return { ok: false, error: 'no_url' };
+  }
+  const body = JSON.stringify({ action, ...payload });
+  const res  = await fetch(SHEETS_API_URL, {
+    method:  'POST',
+    body,
+    // Apps Script requiere no-cors en algunos entornos; si falla, prueba mode:'no-cors'
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ─────────────────────────────────────────
+// PERSIST — guarda y carga via Sheets (con localStorage como caché)
+// ─────────────────────────────────────────
 const saveDis = () => localStorage.setItem('xochi_dis', JSON.stringify([...dismissedAlerts]));
-function load() {
+
+// Guarda un documento (nuevo o editado) en Sheets
+async function saveDocToSheets(doc) {
+  setSaving(true);
   try {
-    const d = localStorage.getItem('xochi_docs3');
+    const result = await apiCall('saveDoc', { doc });
+    if (!result.ok && result.error !== 'no_url') {
+      showToast('⚠ Error al guardar en Google Sheets: ' + result.error);
+    }
+  } catch(e) {
+    showToast('⚠ No se pudo conectar a Google Sheets. Los datos se guardan localmente.');
+  } finally {
+    setSaving(false);
+  }
+  // Siempre guardar localmente también como caché
+  localStorage.setItem('xochi_docs3', JSON.stringify(docs));
+}
+
+// Elimina un documento de Sheets
+async function deleteDocFromSheets(id) {
+  setSaving(true);
+  try {
+    await apiCall('deleteDoc', { id });
+  } catch(e) {
+    showToast('⚠ No se pudo eliminar de Google Sheets.');
+  } finally {
+    setSaving(false);
+  }
+  localStorage.setItem('xochi_docs3', JSON.stringify(docs));
+}
+
+// Guarda una entrada de historial en Sheets
+async function saveHistoryToSheets(entry) {
+  try {
+    await apiCall('addHistory', { entry });
+  } catch(e) {
+    console.warn('No se pudo guardar historial en Sheets:', e);
+  }
+}
+
+// Carga todos los documentos desde Sheets al arrancar
+async function load() {
+  // Cargar alertas descartadas desde localStorage
+  try {
     const dis = localStorage.getItem('xochi_dis');
-    if (d)   docs = JSON.parse(d);
     if (dis) dismissedAlerts = new Set(JSON.parse(dis));
   } catch(e) {}
+
+  if (!SHEETS_API_URL) {
+    // Sin URL configurada: usar caché local
+    try {
+      const d = localStorage.getItem('xochi_docs3');
+      if (d) docs = JSON.parse(d);
+    } catch(e) {}
+    showOfflineBanner();
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const result = await apiCall('getDocs');
+    if (result.ok) {
+      docs = result.docs || [];
+      // Actualizar caché local
+      localStorage.setItem('xochi_docs3', JSON.stringify(docs));
+    } else {
+      throw new Error(result.error);
+    }
+  } catch(e) {
+    // Fallback a caché local si Sheets falla
+    console.warn('No se pudo cargar desde Sheets, usando caché local:', e);
+    try {
+      const d = localStorage.getItem('xochi_docs3');
+      if (d) docs = JSON.parse(d);
+    } catch(e2) {}
+    showToast('⚠ Usando datos locales — no se pudo conectar a Google Sheets');
+  } finally {
+    setLoading(false);
+  }
 }
+
+function showOfflineBanner() {
+  const el = document.getElementById('offline-banner');
+  if (el) el.style.display = 'flex';
+}
+
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
 // ─────────────────────────────────────────
@@ -934,19 +1068,30 @@ function saveDoc() {
 
   const now = todayStr();
   const isNew = !editId;
+  let savedDoc;
 
   if (editId) {
     const idx = docs.findIndex(d=>d.id===editId);
-    if (idx>-1) docs[idx] = {...docs[idx], code, area, name, version, issued, expiry, email, folder, notes, updatedAt:now};
+    if (idx>-1) {
+      docs[idx] = {...docs[idx], code, area, name, version, issued, expiry, email, folder, notes, updatedAt:now};
+      savedDoc = docs[idx];
+    }
   } else {
-    docs.push({ id:uid(), code, area, name, version, issued, expiry, email, folder, notes, created:now, updatedAt:now, renewHistory:[] });
+    savedDoc = { id:uid(), code, area, name, version, issued, expiry, email, folder, notes, created:now, updatedAt:now, renewHistory:[] };
+    docs.push(savedDoc);
   }
 
-  save(); renderAll(); closeAddModal();
+  renderAll(); closeAddModal();
   showToast(isNew ? `Documento ${code} registrado` : `Documento ${code} actualizado`);
   scheduleNotifCheck();
 
-  // ── Notificar al gerente responsable solo al registrar un documento NUEVO
+  // Guardar en Google Sheets (sin bloquear la UI)
+  // Se envía sin el campo renewHistory (se maneja en hoja separada)
+  const docForSheets = {...savedDoc};
+  delete docForSheets.renewHistory;
+  saveDocToSheets(docForSheets);
+
+  // Notificar al gerente solo al registrar un documento NUEVO
   if (isNew && email) {
     sendNewDocEmail({ code, area, name, version, issued, expiry, email, folder, notes });
   }
@@ -1014,9 +1159,26 @@ function confirmRenew() {
   // clear dismissed alerts so new alerts show
   ['expired','week','biweek','month'].forEach(s => dismissedAlerts.delete(docs[idx].id+'-'+s));
   saveDis();
-  save(); renderAll(); closeRenewModal();
+  renderAll(); closeRenewModal();
   showToast(`Actualización registrada — ${docs[idx].code} vence ${fmtDate(newExpiry)}`);
   scheduleNotifCheck();
+
+  // Guardar en Google Sheets
+  const docForSheets = {...docs[idx]};
+  delete docForSheets.renewHistory;
+  saveDocToSheets(docForSheets);
+
+  // Guardar entrada de historial en hoja separada
+  const histEntry = {
+    id:      uid(),
+    docId:   docs[idx].id,
+    date:    todayStr(),
+    version: old.version || '—',
+    issued:  old.issued  || '',
+    expiry:  old.expiry  || '',
+    notes,
+  };
+  saveHistoryToSheets(histEntry);
 }
 
 // ─────────────────────────────────────────
@@ -1036,9 +1198,11 @@ function openDelModal(id) {
 function closeDelModal() { document.getElementById('modal-del').classList.remove('open'); delId=null; }
 function confirmDel() {
   const d = docs.find(x=>x.id===delId); if(!d) return;
-  docs = docs.filter(x=>x.id!==delId);
-  save(); renderAll(); closeDelModal();
+  const id = d.id;
+  docs = docs.filter(x=>x.id!==id);
+  renderAll(); closeDelModal();
   showToast(`Documento ${d.code} eliminado`);
+  deleteDocFromSheets(id);
 }
 
 // ─────────────────────────────────────────
@@ -1200,16 +1364,74 @@ function renderAll() {
 // ─────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────
-load();
-populateAreaSelects();
-populateFilterSelects();
-initNotifBar();
-if (localStorage.getItem('xochi_notif_dismissed')) document.getElementById('notif-request-bar').classList.add('hidden');
-renderAll();
-scheduleNotifCheck();
+async function init() {
+  populateAreaSelects();
+  populateFilterSelects();
+  initNotifBar();
+  if (localStorage.getItem('xochi_notif_dismissed')) document.getElementById('notif-request-bar').classList.add('hidden');
+  renderAll(); // render vacío mientras carga
+  await load();
+  renderAll(); // re-render con datos de Sheets
+  scheduleNotifCheck();
+}
+init();
 </script>
 
 <!--
+════════════════════════════════════════════════════════════════
+INSTRUCCIONES: CONECTAR GOOGLE SHEETS
+════════════════════════════════════════════════════════════════
+
+PASO 1 — Crear el Google Sheet
+  1. Ve a sheets.google.com y crea un nuevo Sheet
+  2. Nómbralo "Xochi - Gestión Documental ISO"
+  3. No necesitas crear las hojas manualmente — el script las crea solo
+
+PASO 2 — Instalar el Apps Script
+  1. Dentro del Sheet: Extensions → Apps Script
+  2. Borra el código que aparece por defecto (la función vacía)
+  3. Abre el archivo xochi_apps_script.js que te entregué
+  4. Copia TODO su contenido y pégalo en el editor
+  5. Haz clic en el ícono 💾 (guardar)
+  6. En el menú superior haz clic en "Run" → selecciona la función "setup"
+  7. Autoriza los permisos cuando te los pida
+     (Google → Advanced → Go to Xochi... → Allow)
+  8. Verás un mensaje de confirmación si funcionó
+
+PASO 3 — Desplegar como Web App
+  1. Haz clic en "Deploy" (botón azul arriba a la derecha)
+  2. Selecciona "New deployment"
+  3. Haz clic en el ícono de engranaje ⚙ y selecciona "Web app"
+  4. Configura:
+     - Description: Xochi API
+     - Execute as: Me
+     - Who has access: Anyone
+  5. Haz clic en "Deploy"
+  6. Autoriza los permisos nuevamente si te los pide
+  7. Copia la URL que aparece — es tu SHEETS_API_URL
+     Tiene el formato: https://script.google.com/macros/s/XXXX/exec
+
+PASO 4 — Conectar al dashboard
+  1. Abre index.html en un editor de texto
+  2. Busca esta línea:
+     const SHEETS_API_URL = '';
+  3. Pega tu URL entre las comillas:
+     const SHEETS_API_URL = 'https://script.google.com/macros/s/XXXX/exec';
+  4. Guarda el archivo y sube a GitHub (reemplaza index.html)
+
+PASO 5 — Verificar
+  1. Abre el dashboard desde tu link de GitHub Pages
+  2. El banner amarillo de "sin configurar" debe desaparecer
+  3. Registra un documento de prueba
+  4. Verifica que aparezca en el Google Sheet automáticamente
+
+IMPORTANTE — Actualizar el Apps Script
+  Cuando hagas cambios al script y quieras publicarlos:
+  1. Deploy → Manage deployments
+  2. Haz clic en el lápiz ✏ de tu deployment
+  3. Version → "New version"
+  4. Save
+
 ════════════════════════════════════════════════════════════════
 INSTRUCCIONES: CONFIGURAR POWER AUTOMATE PARA CORREO DE NUEVO DOCUMENTO
 ════════════════════════════════════════════════════════════════
